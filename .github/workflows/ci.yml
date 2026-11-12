@@ -1,0 +1,44 @@
+name: Validate extension
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run package
+
+  vscode-integration:
+    strategy:
+      matrix:
+        vscode: ['1.100.0', stable]
+        multiRoot: ['0', '1']
+    runs-on: ubuntu-latest
+    env:
+      VSCODE_VERSION: ${{ matrix.vscode }}
+      GHP_TEST_MULTI_ROOT: ${{ matrix.multiRoot }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: xvfb-run -a npm run test:integration

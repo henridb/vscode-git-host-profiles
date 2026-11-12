@@ -1,0 +1,173 @@
+{
+  "name": "vscode-git-host-profiles",
+  "displayName": "Git Host Profiles",
+  "description": "Automatically select VS Code profiles using Git remote hosts, folder globs, project files, or file extensions.",
+  "version": "0.1.0",
+  "publisher": "local-git-host-profiles",
+  "license": "GPL-3.0-only",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "profiles",
+    "git",
+    "workspace",
+    "automation"
+  ],
+  "main": "./dist/src/extension.js",
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Automatic profile switching can enable other extensions. It only runs in trusted workspaces."
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "This version supports local desktop workspaces."
+    }
+  },
+  "scripts": {
+    "clean": "node scripts/clean.cjs",
+    "compile": "tsc -p .",
+    "check": "tsc -p . --noEmit",
+    "test": "npm run compile && node --test dist/test/*.test.js",
+    "test:integration": "npm run compile && node scripts/integration.cjs",
+    "vscode:prepublish": "npm run clean && npm run compile",
+    "package": "node scripts/package.cjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/vscode": "1.100.0",
+    "@vscode/test-electron": "2.5.2",
+    "@vscode/vsce": "4.1.0",
+    "typescript": "5.9.3"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "gitHostProfiles.explain",
+        "title": "Explain Profile Selection",
+        "category": "Git Host Profiles"
+      },
+      {
+        "command": "gitHostProfiles.apply",
+        "title": "Apply Profile Rules Now",
+        "category": "Git Host Profiles"
+      },
+      {
+        "command": "gitHostProfiles.togglePause",
+        "title": "Pause or Resume Automatic Switching",
+        "category": "Git Host Profiles"
+      }
+    ],
+    "configuration": {
+      "title": "Git Host Profiles",
+      "properties": {
+        "gitHostProfiles.enabled": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Automatically select a profile in trusted local workspaces.",
+          "ignoreSync": true
+        },
+        "gitHostProfiles.remoteNames": {
+          "type": "array",
+          "default": [],
+          "scope": "application",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Git remote names to consider. An empty list considers every remote, including fetch and push destinations.",
+          "ignoreSync": true
+        },
+        "gitHostProfiles.rules": {
+          "type": "array",
+          "default": [],
+          "scope": "application",
+          "description": "Rules in priority order. The first matching rule wins for each repository or folder. Every target must select the same profile.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "profile"
+            ],
+            "minProperties": 2,
+            "properties": {
+              "profile": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Exact name of an existing VS Code profile."
+              },
+              "remoteHosts": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Host patterns, such as github.com or *.example.org. All selected remote destinations must match."
+              },
+              "folders": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Globs against absolute folder paths. Use forward slashes, * for one path segment, ** for any depth, and ~ for the home directory."
+              },
+              "files": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Workspace-relative file globs. Every pattern must find at least one file outside .git and node_modules."
+              },
+              "fileExtensions": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "pattern": "^\\.?[A-Za-z0-9][A-Za-z0-9.+_-]*$"
+                },
+                "description": "Filename suffixes, such as py or .d.ts. Only considered when no workspace folder is open."
+              }
+            }
+          },
+          "ignoreSync": true
+        }
+      }
+    }
+  },
+  "overrides": {
+    "@vscode/vsce": {
+      "minimatch": "11.0.1"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/henridb/vscode-git-host-profiles.git"
+  },
+  "bugs": {
+    "url": "https://github.com/henridb/vscode-git-host-profiles/issues"
+  },
+  "homepage": "https://github.com/henridb/vscode-git-host-profiles#readme",
+  "files": [
+    "dist/src/**/*.js",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ]
+}
