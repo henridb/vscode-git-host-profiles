@@ -3,7 +3,12 @@
   "displayName": "Git Host Profiles",
   "description": "Automatically select VS Code profiles using Git remote hosts, folder globs, project files, or file extensions.",
   "version": "0.1.0",
-  "publisher": "local-git-host-profiles",
+  "publisher": "HenrideBoutray",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#090b20",
+    "theme": "dark"
+  },
   "license": "GPL-3.0-only",
   "engines": {
     "vscode": "^1.100.0"
@@ -40,6 +45,7 @@
     "check": "tsc -p . --noEmit",
     "test": "npm run compile && node --test dist/test/*.test.js",
     "test:integration": "npm run compile && node scripts/integration.cjs",
+    "demo": "npm run compile && node scripts/demo.cjs",
     "vscode:prepublish": "npm run clean && npm run compile",
     "package": "node scripts/package.cjs"
   },
@@ -166,6 +172,9 @@
   "homepage": "https://github.com/henridb/vscode-git-host-profiles#readme",
   "files": [
     "dist/src/**/*.js",
+    "media/icon.png",
+    "media/demo.gif",
+    "media/demo.png",
     "README.md",
     "CHANGELOG.md",
     "LICENSE"

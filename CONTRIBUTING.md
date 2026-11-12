@@ -56,16 +56,23 @@ order of rules is the priority mechanism; avoid adding implicit specificity
 rules. An unknown host or unmatched workspace target must not silently select
 a fallback profile.
 
+## Presentation assets
+
+The [media guide](docs/MEDIA.md) describes the icon and the reproducible demo.
+Run npm run demo to capture profile switching in an isolated VS Code instance;
+on Windows it also rebuilds the GIF. Inspect all frames before committing them.
+
 ## Packaging and future publication
 
 npm run package creates a VSIX in artifacts/. The package contains the runtime,
-README, changelog, license, and manifest. Developer tools, tests, fixtures, local
+README, changelog, license, manifest, and icon/demo assets. Developer tools,
+tests, fixtures, original icon artwork, local
 settings, and source-control files are excluded.
 
 Before publishing:
 
-1. Register and verify ownership of your Marketplace publisher.
-2. Replace the placeholder publisher in package.json. The integration runner
+1. Confirm that you can publish under the `HenrideBoutray` Marketplace publisher.
+2. Check that package.json uses that publisher ID. The integration runner
    derives the extension ID from that manifest.
 3. Review the README, license, version, and changelog. Add a Marketplace icon
    if desired.

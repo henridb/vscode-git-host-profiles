@@ -1,11 +1,24 @@
 # Git Host Profiles
 
+<img src="media/icon.png" alt="Git Host Profiles icon" width="96" height="96">
+
 Automatically select a VS Code profile when you open a project, using Git remote
 hosts, folder patterns, project files, or standalone file extensions.
 
 For example, show your GitHub tools in GitHub projects and your self-hosted
 forge's tools in work projects. New repositories that match your rules need no
 individual setup.
+
+## Demonstration
+
+![A GitHub remote selects GitHub; a self-hosted remote selects Work Git; an unmatched remote keeps Work Git active.](media/demo.gif)
+
+Recorded in VS Code with the real extension and fictional repositories. Changing
+one repository's remote selects GitHub, then Work Git; an unmatched host keeps
+Work Git active. Different profile colors make the switches visible. You choose
+each profile's extensions and Activity Bar layout yourself.
+
+[View a static preview](media/demo.png).
 
 ## Getting started
 
@@ -180,9 +193,9 @@ VS Code can update a sideloaded extension if a Marketplace item later uses the
 same publisher and extension ID. A local VSIX is not, by itself, a guarantee
 against future automatic updates.
 
-The initial publisher ID, local-git-host-profiles, is a packaging placeholder,
-not a verified publisher or an ownership claim. Before Marketplace publication,
-replace it with a publisher you control. See [CONTRIBUTING.md](CONTRIBUTING.md).
+The publisher ID is `HenrideBoutray`, and the extension ID is
+`HenrideBoutray.vscode-git-host-profiles`. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the publication checklist.
 
 ## Privacy and compatibility
 

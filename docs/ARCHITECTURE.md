@@ -804,8 +804,9 @@ The `@types/vscode` development package supplies compile-time API declarations;
 the actual `vscode` API module is supplied by the editor at runtime.
 
 The VSIX is the installable archive. Its allowlist includes the compiled runtime
-and package metadata/documents. Tests, developer scripts, local settings,
-dependency trees, and this walkthrough are excluded.
+and package metadata/documents, the icon, and the README demonstration assets.
+Tests, developer scripts, original icon artwork, local settings, dependency
+trees, and this walkthrough are excluded.
 
 | npm command                 | Purpose                                                                 |
 | --------------------------- | ----------------------------------------------------------------------- |
@@ -817,6 +818,10 @@ dependency trees, and this walkthrough are excluded.
 | `npm run clean`             | Remove generated `dist` output                                          |
 | `npm run package`           | Create the VSIX under `artifacts`                                       |
 | `npm run vscode:prepublish` | Clean and compile; the packaging tool invokes this before packaging too |
+
+`npm run demo` compiles the project and records the real extension in an isolated
+VS Code instance. The [media guide](MEDIA.md) explains the fixture, capture probe,
+and GIF encoder. These tools are excluded from the installed extension.
 
 The name `vscode:prepublish` does not mean the command uploads the extension.
 The current build workflow contains no publishing step.
@@ -853,8 +858,10 @@ development-only is not the only packaging control.
 | [LICENSE](../LICENSE)                                   | The repository's existing GPLv3 license, preserved                                                                                                                      |
 | [This guide](ARCHITECTURE.md)                           | Explanation of how the implementation fits together                                                                                                                     |
 
-The manifest contains a placeholder publisher ID for local packaging.
-Publishing requires replacing it with a publisher you control.
+The manifest uses the publisher ID `HenrideBoutray`, giving the extension ID
+`HenrideBoutray.vscode-git-host-profiles`. The integration runner derives this
+identity from the manifest. Publishing requires access to that Marketplace
+publisher.
 
 A sideloaded VSIX can still be updated if a Marketplace extension later uses the
 same publisher/name ID. The README therefore instructs users of the local build
