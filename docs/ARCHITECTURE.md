@@ -1,4 +1,4 @@
-# Git Host Profiles: an implementation walkthrough
+# Smart Profiles: an implementation walkthrough
 
 This guide explains the current implementation from its user-visible behavior
 down to its individual functions. The examples use fictional project paths and
@@ -60,10 +60,10 @@ rule matching, so a target can exist without matching any rule.
 
 For each workspace root folder, there are two cases:
 
-| What the extension discovers | What it evaluates as a target |
-| --- | --- |
+| What the extension discovers                                             | What it evaluates as a target                                                         |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
 | Git repositories inside the folder, including the root repository itself | Each outermost discovered repository; nested repositories and submodules are excluded |
-| No Git repository inside the folder | The workspace root folder itself |
+| No Git repository inside the folder                                      | The workspace root folder itself                                                      |
 
 "Outermost" is relative to each workspace root folder: a repository is selected
 only when no other discovered repository inside that same folder contains it.
@@ -256,11 +256,11 @@ folder. The submodule's host cannot veto the application repository's selection.
 
 Possible outcomes for the two targets are:
 
-| Application repository's result | Notes folder's result | Window decision |
-| --- | --- | --- |
-| Rule 1 selects Work Git | Rule 3 selects Work Git | Apply Work Git |
-| Rule 1 selects Work Git | Rule 2 selects Personal Git | Keep the current profile |
-| Rule 1 selects Work Git | No rule matches | Keep the current profile |
+| Application repository's result | Notes folder's result       | Window decision          |
+| ------------------------------- | --------------------------- | ------------------------ |
+| Rule 1 selects Work Git         | Rule 3 selects Work Git     | Apply Work Git           |
+| Rule 1 selects Work Git         | Rule 2 selects Personal Git | Keep the current profile |
+| Rule 1 selects Work Git         | No rule matches             | Keep the current profile |
 
 Different rules can select the same profile, as in the first row. The agreement
 check compares the selected **profiles**, not the number of matching rules.
@@ -421,12 +421,12 @@ The integration probe uses it without reaching into private Controller fields.
 `git.ts` describes the small part of the built-in Git extension's API that the
 Controller consumes.
 
-| Interface      | What it describes                                                       |
-| -------------- | ----------------------------------------------------------------------- |
-| `GitRemote`    | A remote name and optional fetch/push URLs                              |
-| `Repository`   | A repository root, remotes, change event, and remote-editing method                 |
+| Interface      | What it describes                                                     |
+| -------------- | --------------------------------------------------------------------- |
+| `GitRemote`    | A remote name and optional fetch/push URLs                            |
+| `Repository`   | A repository root, remotes, change event, and remote-editing method   |
 | `GitApi`       | Discovery state, repository opening, and repository open/close events |
-| `GitExtension` | Enablement state, its change event, and `getAPI(1)`                     |
+| `GitExtension` | Enablement state, its change event, and `getAPI(1)`                   |
 
 These are type descriptions, not another Git implementation. The runtime uses
 the Git support already supplied by VS Code. The switcher's runtime does not
@@ -461,9 +461,9 @@ The other functions divide into four groups:
 
 Source: [src/repositories.ts](../src/repositories.ts).
 
-| Function | Responsibility |
-| --- | --- |
-| `belongsTo(parent, child)` | Check URI identity and path containment |
+| Function                                              | Responsibility                                                                                          |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `belongsTo(parent, child)`                            | Check URI identity and path containment                                                                 |
 | `topLevelRepositories(workspaceFolder, repositories)` | Keep repositories inside the workspace folder that have no containing repository among those candidates |
 
 `belongsTo()` checks URI scheme and authority, then uses a relative path to test
@@ -684,7 +684,7 @@ associations through its commands; the extension never edits the catalog file.
 | Workspace pause flag                   | VS Code's workspace state                                          |
 | Last handled decision                  | A hash in workspace state                                          |
 | Existing profile names and IDs         | Read from VS Code's local profile catalog                          |
-| Decision explanations                  | The local Git Host Profiles output channel and status tooltip      |
+| Decision explanations                  | The local Smart Profiles output channel and status tooltip          |
 | Integration-test projects and settings | Newly created temporary directories                                |
 
 The configuration entries use `scope: "application"`, so repository settings
@@ -710,7 +710,7 @@ excluded from the installed package.
 | [test/matching.test.ts](../test/matching.test.ts)               |    12 | Remote formats, domain boundaries, mixed destinations, folder globs, literal regex characters, priority, required files, target agreement, suffix rules, validation, ownership, IPv6 |
 | [test/coordinator.test.ts](../test/coordinator.test.ts)         |     4 | Persistence before switching, restart suppression, queued duplicates, force, failure recovery, returning from an unmatched context                                                   |
 | [test/profile-catalog.test.ts](../test/profile-catalog.test.ts) |     2 | Catalog locations and valid/unambiguous name-to-ID mapping                                                                                                                           |
-| [test/repositories.test.ts](../test/repositories.test.ts) | 5 | Outermost repository selection, discovery order, sibling boundaries, explicit submodule roots, folder fallback, and URI identity |
+| [test/repositories.test.ts](../test/repositories.test.ts)       |     5 | Outermost repository selection, discovery order, sibling boundaries, explicit submodule roots, folder fallback, and URI identity                                                     |
 
 The matching tests build representative `Target` and `Snapshot` values.
 The repository-selection tests pass representative paths to the discovery
@@ -912,7 +912,7 @@ validation in `parseRules()` and `profileIds()` is what checks external data.
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Change rule priority or agreement behavior     | `matching.ts` and contract tests; then update the documented contract                                                          |
 | Add a matcher                                  | `model.ts`, manifest schema, `matching.ts`, and possibly `Controller.snapshot()`                                               |
-| Change which repositories influence selection | `repositories.ts` and its tests; then update the documented target policy |
+| Change which repositories influence selection  | `repositories.ts` and its tests; then update the documented target policy                                                      |
 | React to another editor event                  | Controller subscriptions and scheduling                                                                                        |
 | Change explanations or status display          | `describe()`, `inspect()` and UI callbacks                                                                                     |
 | Handle a new VS Code profile layout or command | `profile-catalog.ts` and `profiles.ts`                                                                                         |

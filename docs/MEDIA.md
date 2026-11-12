@@ -90,4 +90,35 @@ logos. The source image is retained in this repository.
 
 The generation prompt was:
 
-> Use case: logo-brand. Asset type: square Visual Studio Code Marketplace extension icon for an open-source utility named Git Host Profiles. Primary request: one polished, original, minimal app icon expressing Git repository branches automatically selecting editor profiles. Composition: a bold central branching connector with three circular Git-like nodes, transitioning into two small rounded editor-profile cards, one slightly offset behind the other. Keep the silhouette simple and readable at 32 pixels. Flat geometric vector-like style, crisp thick strokes, restrained cyan and warm amber accents on a solid deep ink/navy rounded-square tile, centered with generous safe padding. No letters, words, numbers, watermark, company mascots, GitHub/GitLab/VS Code trademarks, gradients, photographic effects, or mockup surroundings. Deliver one icon only, straight-on, square canvas with an opaque background.
+> Use case: logo-brand. Asset type: square Visual Studio Code Marketplace
+> extension icon for an open-source utility named Git Host Profiles. Primary
+> request: one polished, original, minimal app icon expressing Git repository
+> branches automatically selecting editor profiles. Composition: a bold central
+> branching connector with three circular Git-like nodes, transitioning into two
+> small rounded editor-profile cards, one slightly offset behind the other. Keep
+> the silhouette simple and readable at 32 pixels. Flat geometric vector-like
+> style, crisp thick strokes, restrained cyan and warm amber accents on a solid
+> deep ink/navy rounded-square tile, centered with generous safe padding. No
+> letters, words, numbers, watermark, company mascots, GitHub/GitLab/VS Code
+> trademarks, gradients, photographic effects, or mockup surroundings. Deliver
+> one icon only, straight-on, square canvas with an opaque background.
+
+The outer white corners were subsequently removed with the built-in image editor.
+Only the area outside the navy rounded square is transparent; the navy tile and
+white branch are preserved. The edited source was exported again to 256 × 256,
+preserving its alpha channel.
+
+The edit prompt was:
+
+> Use case: background-extraction. Image 1 is the edit target, an existing
+> finished extension icon. Make one precise edit only: replace the WHITE OUTER
+> CANVAS/CORNERS OUTSIDE the dark navy rounded-square tile with genuine
+> transparent alpha. The entire navy rounded-square tile must remain fully
+> opaque, including the navy inside all symbol holes. Preserve the existing
+> white Git branch and its three circular nodes as opaque white. Preserve the
+> cyan and amber profile cards and connectors, all interior colors, positions,
+> shapes, lighting, and composition. Do not redesign, re-layout, recolor, add
+> text, crop, or remove the navy tile. Keep the complete square canvas and a
+> smooth antialiased rounded outer edge, with no white fringe or halo. Output an
+> RGBA PNG with transparent outer corners; no checkerboard pattern baked into
+> the pixels.

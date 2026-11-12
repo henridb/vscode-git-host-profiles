@@ -1,6 +1,6 @@
 {
   "name": "vscode-git-host-profiles",
-  "displayName": "Git Host Profiles",
+  "displayName": "Smart Profiles",
   "description": "Automatically select VS Code profiles using Git remote hosts, folder globs, project files, or file extensions.",
   "version": "0.1.0",
   "publisher": "HenrideBoutray",
@@ -61,21 +61,21 @@
       {
         "command": "gitHostProfiles.explain",
         "title": "Explain Profile Selection",
-        "category": "Git Host Profiles"
+        "category": "Smart Profiles"
       },
       {
         "command": "gitHostProfiles.apply",
         "title": "Apply Profile Rules Now",
-        "category": "Git Host Profiles"
+        "category": "Smart Profiles"
       },
       {
         "command": "gitHostProfiles.togglePause",
         "title": "Pause or Resume Automatic Switching",
-        "category": "Git Host Profiles"
+        "category": "Smart Profiles"
       }
     ],
     "configuration": {
-      "title": "Git Host Profiles",
+      "title": "Smart Profiles",
       "properties": {
         "gitHostProfiles.enabled": {
           "type": "boolean",

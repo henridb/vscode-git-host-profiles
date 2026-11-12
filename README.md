@@ -1,6 +1,6 @@
-# Git Host Profiles
+# Smart Profiles
 
-<img src="media/icon.png" alt="Git Host Profiles icon" width="96" height="96">
+<img src="media/icon.png" alt="Smart Profiles icon" width="96" height="96">
 
 Automatically select a VS Code profile when you open a project, using Git remote
 hosts, folder patterns, project files, or standalone file extensions.
@@ -24,7 +24,7 @@ each profile's extensions and Activity Bar layout yourself.
 
 1. Create the profiles you want through **File > Preferences > Profiles**.
 2. In each profile, choose the extensions and Activity Bar icons you want.
-3. Install Git Host Profiles and select **Apply Extension to all Profiles** from
+3. Install Smart Profiles and select **Apply Extension to all Profiles** from
    its extension management menu.
 4. Add rules to your **user settings** through
    **Preferences: Open User Settings (JSON)**.
@@ -151,7 +151,7 @@ deliberately ignores other destinations.
 
 ## Commands and settings
 
-Commands are available through the Command Palette under **Git Host Profiles**:
+Commands are available through the Command Palette under **Smart Profiles**:
 
 | Command                             | Effect                                                                     |
 | ----------------------------------- | -------------------------------------------------------------------------- |
