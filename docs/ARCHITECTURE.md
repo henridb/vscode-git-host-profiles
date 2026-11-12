@@ -14,7 +14,7 @@ The original goal was to show different Git tools for different projects.
 A VS Code profile can already store the relevant extensions and view layout.
 The extension's job is to select the appropriate existing profile automatically.
 
-~~~mermaid
+```mermaid
 flowchart LR
     Project["Open a project"] --> Rules["Evaluate your local rules"]
     Rules --> Profile["Select an existing VS Code profile"]
@@ -22,7 +22,7 @@ flowchart LR
     VSCode --> Extensions["Enabled extensions"]
     VSCode --> Layout["Activity Bar and view layout"]
     VSCode --> Settings["Other profile settings"]
-~~~
+```
 
 You create and configure the profiles yourself. For example, one profile can
 show GitHub tools and another can show tools for a self-hosted forge.
@@ -38,7 +38,59 @@ for the desired Git tools is a user configuration choice.
 The code separates collecting facts, deciding what they mean, and changing
 VS Code's state.
 
-~~~mermaid
+### Workspace structure
+
+One VS Code window contains one workspace, which can have several root folders.
+Each root folder can contain zero or more discovered Git repositories:
+
+```text
+One VS Code window
+└── One workspace
+    └── One or more root folders
+        └── Zero or more discovered Git repositories
+```
+
+A workspace root folder is one of the top-level folders shown in the Explorer.
+
+### What is a target?
+
+A **target is one top-level repository or fallback folder that the extension
+evaluates independently against your rules**. Targets are identified before
+rule matching, so a target can exist without matching any rule.
+
+For each workspace root folder, there are two cases:
+
+| What the extension discovers | What it evaluates as a target |
+| --- | --- |
+| Git repositories inside the folder, including the root repository itself | Each outermost discovered repository; nested repositories and submodules are excluded |
+| No Git repository inside the folder | The workspace root folder itself |
+
+"Outermost" is relative to each workspace root folder: a repository is selected
+only when no other discovered repository inside that same folder contains it.
+
+If the workspace root is a Git repository, it is the only repository target
+for that root. If the root is a container for several independent sibling
+repositories, each sibling becomes a target.
+
+A dependency's host does not determine its parent project's profile. A
+submodule opened directly, or added explicitly as its own workspace root
+folder, is evaluated independently because the user selected it as a project.
+
+In the fallback case, if the root folder is inside an enclosing discovered
+repository, the folder remains the target and can use that repository's
+remotes. Standalone files are handled separately when no workspace folder
+is open.
+
+### How targets are matched
+
+For each target, the first matching rule selects a profile. The extension
+switches only when every target has a selection and all those selections name
+the same profile. If any target is unmatched, or the selected profiles differ,
+the current profile stays active.
+
+### How the pieces communicate
+
+```mermaid
 flowchart TD
     Settings["User settings"] --> Validation["model.ts: parseRules"]
     Git["Built-in VS Code Git API"] --> Controller["extension.ts: Controller"]
@@ -51,7 +103,7 @@ flowchart TD
     Coordinator --> Adapter["profiles.ts: apply the profile"]
     Catalog["profile-catalog.ts: resolve profile names and IDs"] --> Adapter
     Adapter --> Editor["VS Code profile command and possible window reload"]
-~~~
+```
 
 The matching engine has no dependency on the editor's live state. Given the
 same rules and snapshot, it produces the same decision. This makes most behavior
@@ -72,7 +124,7 @@ the adapter.
 
 Suppose your user settings contain:
 
-~~~json
+```json
 {
   "gitHostProfiles.rules": [
     {
@@ -81,13 +133,13 @@ Suppose your user settings contain:
     }
   ]
 }
-~~~
+```
 
 You open a repository whose remote is:
 
-~~~text
+```text
 git@forge.example.org:team/example.git
-~~~
+```
 
 The process is:
 
@@ -105,7 +157,7 @@ The process is:
 
 A simplified snapshot looks like this:
 
-~~~ts
+```ts
 {
   targets: [
     {
@@ -117,20 +169,20 @@ A simplified snapshot looks like this:
   home: "/home/example",
   caseSensitive: true
 }
-~~~
+```
 
 The folder name is irrelevant to this particular rule: only the host condition
 is present.
 
 A simplified decision looks like this:
 
-~~~ts
+```ts
 {
   profile: "Work Git",
   reason: "All repositories and folders select the same profile.",
   rules: [0]
 }
-~~~
+```
 
 Rule indices are zero-based in the code. The displayed explanation converts
 them to human-friendly numbers starting at 1.
@@ -143,26 +195,26 @@ you want a different contract.
 
 ### Within one rule
 
-| Condition | How it is interpreted |
-| --- | --- |
-| `profile` | Exact name of an existing profile |
-| `remoteHosts` | Every selected remote destination must match at least one listed host pattern |
-| `folders` | The target folder must match at least one listed folder pattern |
-| `files` | Every listed pattern must find at least one filename |
-| `fileExtensions` | The active standalone file must have at least one listed suffix |
+| Condition        | How it is interpreted                                                         |
+| ---------------- | ----------------------------------------------------------------------------- |
+| `profile`        | Exact name of an existing profile                                             |
+| `remoteHosts`    | Every selected remote destination must match at least one listed host pattern |
+| `folders`        | The target folder must match at least one listed folder pattern               |
+| `files`          | Every listed pattern must find at least one filename                          |
+| `fileExtensions` | The active standalone file must have at least one listed suffix               |
 
 Different workspace conditions in one rule are combined with **AND**.
 
 For example:
 
-~~~json
+```json
 {
   "profile": "Work TypeScript",
   "remoteHosts": ["forge.example.org"],
   "folders": ["**/work/**"],
   "files": ["package.json", "src/**/*.ts"]
 }
-~~~
+```
 
 This requires a matching host, a folder under the matching path, and both
 project-file patterns. Merely having `package.json` is insufficient.
@@ -176,26 +228,47 @@ Validation rejects combining `fileExtensions` with workspace conditions.
 
 ### Across rules
 
-For each target, the **first matching rule wins**. Array order expresses
-priority; there is no automatic ranking by specificity.
+For each repository or folder target, the **first matching rule wins**.
+A target can match zero, one, or several rules. If several match, later matches
+do not create a conflict: the first rule determines that target's selected
+profile. Array order expresses priority; there is no automatic ranking by
+specificity.
 
 A broad folder rule placed first can therefore take precedence over a more
 specific host rule. Place the rule you want to win first.
 
 ### Across repositories and workspace folders
 
-A window has one active profile. All targets must therefore agree.
+A window has one active profile. **Every target must match a rule, and all
+targets must select the same profile**, before the extension applies it.
 
-| Target A selects | Target B selects | Window decision |
+For example, one window could contain:
+
+```text
+Workspace
+├── application/          workspace root folder; Git repository → target 1
+│   └── vendor/library/   discovered Git submodule              → ignored
+└── notes/                workspace root folder; no Git repo    → target 2
+```
+
+There are two targets: the top-level application repository and the notes
+folder. The submodule's host cannot veto the application repository's selection.
+
+Possible outcomes for the two targets are:
+
+| Application repository's result | Notes folder's result | Window decision |
 | --- | --- | --- |
-| Work Git | Work Git | Work Git |
-| Work Git | Personal Git | Keep the current profile |
-| Work Git | No matching rule | Keep the current profile |
+| Rule 1 selects Work Git | Rule 3 selects Work Git | Apply Work Git |
+| Rule 1 selects Work Git | Rule 2 selects Personal Git | Keep the current profile |
+| Rule 1 selects Work Git | No rule matches | Keep the current profile |
 
-The Controller uses repositories discovered by VS Code's Git integration.
-If a workspace folder contains no discovered repository, the folder itself
-becomes a target. If a workspace opens a subfolder of a repository, the
-Controller can associate it with the enclosing discovered repository.
+Different rules can select the same profile, as in the first row. The agreement
+check compares the selected **profiles**, not the number of matching rules.
+
+In the last row, the notes folder is still a target; it simply has no selection.
+An unmatched top-level target prevents switching, just as conflicting selections
+do. A nested dependency does not participate in this agreement check unless
+opened as its own workspace root folder.
 
 A repository can also have conflicting remotes. If its fetch destination is
 on one host and its push destination is on another, a rule matching only one
@@ -213,12 +286,12 @@ An `interface` describes a TypeScript data contract. It does not create a
 runtime object or validate incoming JSON. That is why this file contains both
 interfaces and an actual validator.
 
-| Interface | Purpose |
-| --- | --- |
-| `Rule` | A profile name and one or more matching conditions |
-| `Target` | Facts about one repository or folder |
+| Interface  | Purpose                                                                                   |
+| ---------- | ----------------------------------------------------------------------------------------- |
+| `Rule`     | A profile name and one or more matching conditions                                        |
+| `Target`   | Facts about one repository or folder to evaluate, whether or not a rule matches it        |
 | `Snapshot` | All targets in a window, optional standalone file, home directory, and path case behavior |
-| `Decision` | Optional selected profile, explanation, and matching rule indices |
+| `Decision` | Optional selected profile, explanation, and matching rule indices                         |
 
 ### parseRules(value)
 
@@ -247,24 +320,24 @@ arrays is the concrete protection against retaining a caller's mutable arrays.
 
 Source: [src/matching.ts](../src/matching.ts).
 
-| Function | Input → result | Role |
-| --- | --- | --- |
-| `remoteHost(remote)` | Remote text → hostname or `null` | Normalize different remote formats |
-| `globMatches(pattern, value, caseSensitive)` | Pattern and text → boolean | Match the small host/folder glob language |
-| `folderMatches(pattern, folder, home, caseSensitive)` | Folder pattern and path → boolean | Normalize paths and expand a leading `~` |
-| `matchesTarget(rule, target, snapshot)` | One rule and target → boolean | Apply the workspace-condition contract |
-| `decide(rules, snapshot)` | Validated rules and facts → `Decision` | Apply priority and require agreement |
+| Function                                              | Input → result                         | Role                                      |
+| ----------------------------------------------------- | -------------------------------------- | ----------------------------------------- |
+| `remoteHost(remote)`                                  | Remote text → hostname or `null`       | Normalize different remote formats        |
+| `globMatches(pattern, value, caseSensitive)`          | Pattern and text → boolean             | Match the small host/folder glob language |
+| `folderMatches(pattern, folder, home, caseSensitive)` | Folder pattern and path → boolean      | Normalize paths and expand a leading `~`  |
+| `matchesTarget(rule, target, snapshot)`               | One rule and target → boolean          | Apply the workspace-condition contract    |
+| `decide(rules, snapshot)`                             | Validated rules and facts → `Decision` | Apply priority and require agreement      |
 
 ### remoteHost()
 
 Both of these produce the same host:
 
-~~~text
+```text
 https://forge.example.org/team/example.git
 git@forge.example.org:team/example.git
                  ↓
         forge.example.org
-~~~
+```
 
 The parser handles supported URL-style remotes and scp-style SSH remotes.
 It normalizes case and a trailing hostname dot. User information, repository
@@ -285,11 +358,11 @@ an anchored regular expression; other regex characters are escaped.
 
 For example:
 
-~~~text
+```text
 Pattern:  **/gits/gh-*/**
 Path:     /home/example/gits/gh-new-team/new-repository
 Result:   match
-~~~
+```
 
 `*` stays within a path segment; `**` can cross separators.
 `**/` also permits zero directory levels.
@@ -310,7 +383,7 @@ project-file conditions.
 
 `decide()` has two branches:
 
-~~~mermaid
+```mermaid
 flowchart TD
     Start["decide"] --> Workspace{"Any workspace targets?"}
     Workspace -->|No| Standalone["Find the first matching standalone suffix rule"]
@@ -321,7 +394,7 @@ flowchart TD
     Agree -->|No| Keep
     Agree -->|Yes| Select["Return that profile"]
     Standalone --> Result["Return a profile or no selection, with a reason"]
-~~~
+```
 
 The engine returns a decision. It does not perform the switch.
 
@@ -348,16 +421,18 @@ The integration probe uses it without reaching into private Controller fields.
 `git.ts` describes the small part of the built-in Git extension's API that the
 Controller consumes.
 
-| Interface | What it describes |
-| --- | --- |
-| `GitRemote` | A remote name and optional fetch/push URLs |
-| `Repository` | A repository root, remotes, and repository-change event |
-| `GitApi` | Discovery state, current repositories, and repository open/close events |
-| `GitExtension` | Enablement state, its change event, and `getAPI(1)` |
+| Interface      | What it describes                                                       |
+| -------------- | ----------------------------------------------------------------------- |
+| `GitRemote`    | A remote name and optional fetch/push URLs                              |
+| `Repository`   | A repository root, remotes, change event, and remote-editing method                 |
+| `GitApi`       | Discovery state, repository opening, and repository open/close events |
+| `GitExtension` | Enablement state, its change event, and `getAPI(1)`                     |
 
 These are type descriptions, not another Git implementation. The runtime uses
 the Git support already supplied by VS Code. The switcher's runtime does not
-spawn its own Git process.
+spawn its own Git process. The integration probe also uses `openRepository()`
+to expose the real submodule and `addRemote()` to change a test repository's
+remotes through the Git API.
 
 ### Controller functions
 
@@ -367,29 +442,55 @@ and subscribes to configuration, workspace, editor, and trust changes.
 
 The other functions divide into four groups:
 
+| Function                              | Responsibility                                                                                                            |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `start()`                             | Set up file watchers, activate the built-in Git extension when applicable, connect to it, and schedule initial evaluation |
+| `connectGit()`                        | Replace Git subscriptions when enablement changes; watch discovery and repository open/close events                       |
+| `watchRepository(repository)`         | Subscribe once to changes in a discovered repository                                                                      |
+| `watchFiles()`                        | Replace watchers for configured project-file patterns; reevaluate on filename creation/deletion                           |
+| `settings()`                          | Read user configuration and validate rules and remote names                                                               |
+| `snapshot(rules, remoteNames, token)` | Collect the plain matching inputs                                                                                         |
+| `evaluate(token)`                     | Check operating conditions, gather a snapshot, decide, and calculate the fingerprint                                      |
+| `inspect()`                           | Evaluate and return an explanation without applying it                                                                    |
+| `describe(inspection)`                | Format the explanation and human-readable rule numbers                                                                    |
+| `schedule(force)`                     | Debounce events, invalidate stale work, and remember an explicit reapply request                                          |
+| `run()`                               | Evaluate the latest context, update status, and send a ready decision to the coordinator                                  |
+| `dispose()`                           | Clear timers, cancel work, and dispose watchers, subscriptions, and UI resources                                          |
+
+### Selecting top-level repositories
+
+Source: [src/repositories.ts](../src/repositories.ts).
+
 | Function | Responsibility |
 | --- | --- |
-| `start()` | Set up file watchers, activate the built-in Git extension when applicable, connect to it, and schedule initial evaluation |
-| `connectGit()` | Replace Git subscriptions when enablement changes; watch discovery and repository open/close events |
-| `watchRepository(repository)` | Subscribe once to changes in a discovered repository |
-| `watchFiles()` | Replace watchers for configured project-file patterns; reevaluate on filename creation/deletion |
-| `settings()` | Read user configuration and validate rules and remote names |
-| `snapshot(rules, remoteNames, token)` | Collect the plain matching inputs |
-| `evaluate(token)` | Check operating conditions, gather a snapshot, decide, and calculate the fingerprint |
-| `inspect()` | Evaluate and return an explanation without applying it |
-| `describe(inspection)` | Format the explanation and human-readable rule numbers |
-| `schedule(force)` | Debounce events, invalidate stale work, and remember an explicit reapply request |
-| `run()` | Evaluate the latest context, update status, and send a ready decision to the coordinator |
-| `dispose()` | Clear timers, cancel work, and dispose watchers, subscriptions, and UI resources |
+| `belongsTo(parent, child)` | Check URI identity and path containment |
+| `topLevelRepositories(workspaceFolder, repositories)` | Keep repositories inside the workspace folder that have no containing repository among those candidates |
 
-The module-level `belongsTo(parent, child)` helper checks URI scheme and
-authority, then uses a relative path to test containment. This avoids confusing
-a sibling such as `/projects/repo-other` with a descendant of `/projects/repo`.
+`belongsTo()` checks URI scheme and authority, then uses a relative path to test
+containment. This avoids confusing a sibling such as `/projects/repo-other`
+with a descendant of `/projects/repo`.
+
+`topLevelRepositories()` performs the discovery-policy decision before rule
+matching. It first scopes candidates to one workspace root, then excludes
+nested repositories regardless of discovery order. The matcher therefore
+receives only the locations whose profiles should influence the window.
+Changing a dependency's host cannot create a conflicting target under its parent.
+
+This scoping also means an explicitly opened submodule remains eligible:
+its parent is outside that workspace root and is not a candidate there.
+
+The `Location` type describes only the URI fields these helpers need. Its
+`Pick` type selects those fields from VS Code's URI type. The generic `T`
+retains each repository object's original type, so the Controller can still
+read its remotes after filtering. Tests can supply small path objects without
+starting VS Code.
 
 ### What snapshot() actually stores
 
-`snapshot()` associates workspace folders with discovered repositories, filters
-the selected remote names, gathers fetch/push URLs, and turns them into hosts.
+`snapshot()` builds the repository/folder targets described in
+[What is a target?](#what-is-a-target), using `topLevelRepositories()` before
+matching any rule. It then filters the selected remote names, gathers fetch/push
+URLs, and turns them into hosts.
 
 It searches each requested project-file pattern with a maximum of one result:
 the question is whether a match exists. It excludes `.git` and `node_modules`.
@@ -397,13 +498,13 @@ the question is whether a match exists. It excludes `.git` and `node_modules`.
 An important detail: `Target.files` contains the **patterns that found a match**,
 not the matched paths or file contents.
 
-~~~ts
+```ts
 {
   folder: "/projects/example",
   hosts: ["forge.example.org"],
   files: new Set(["package.json", "src/**/*.ts"])
 }
-~~~
+```
 
 The matching engine can consequently test `target.files.has(pattern)` without
 knowing anything about filesystem APIs.
@@ -423,10 +524,10 @@ for discovery.
 
 ### Commands
 
-| Command | Constructor callback |
-| --- | --- |
-| Explain Profile Selection | Call `inspect()`, format the explanation, and show the output channel |
-| Apply Profile Rules Now | Call `schedule(true)` to bypass duplicate suppression for this application |
+| Command                             | Constructor callback                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Explain Profile Selection           | Call `inspect()`, format the explanation, and show the output channel                          |
+| Apply Profile Rules Now             | Call `schedule(true)` to bypass duplicate suppression for this application                     |
 | Pause or Resume Automatic Switching | Toggle the saved workspace pause flag, then schedule reevaluation; resuming requests a reapply |
 
 The Apply command does not bypass pause, trust checks, or unsupported-workspace
@@ -436,12 +537,12 @@ checks. These are evaluated before any decision is applied.
 
 There are four separate problems here, with a mechanism for each.
 
-| Problem | Mechanism | Location |
-| --- | --- | --- |
-| Several events arrive together | A 300 ms debounce timer | `Controller.schedule()` |
-| An old search finishes after newer information arrives | Generation number and cancellation token | `schedule()` and `run()` |
-| Two application requests overlap | A Promise chain that serializes operations | `SwitchCoordinator.apply()` |
-| Reloading starts the extension again | A persisted decision fingerprint | `evaluate()` and `SwitchCoordinator.apply()` |
+| Problem                                                | Mechanism                                  | Location                                     |
+| ------------------------------------------------------ | ------------------------------------------ | -------------------------------------------- |
+| Several events arrive together                         | A 300 ms debounce timer                    | `Controller.schedule()`                      |
+| An old search finishes after newer information arrives | Generation number and cancellation token   | `schedule()` and `run()`                     |
+| Two application requests overlap                       | A Promise chain that serializes operations | `SwitchCoordinator.apply()`                  |
+| Reloading starts the extension again                   | A persisted decision fingerprint           | `evaluate()` and `SwitchCoordinator.apply()` |
 
 ### Debouncing and stale results
 
@@ -493,7 +594,7 @@ installed extension, an approval decision, or a guarantee about future updates.
 
 ### Why persistence happens before the switch
 
-~~~mermaid
+```mermaid
 sequenceDiagram
     participant Code as VS Code
     participant Controller as Controller
@@ -509,7 +610,7 @@ sequenceDiagram
     Controller->>State: Read lastDecision
     State-->>Controller: H
     Controller->>Controller: Skip repeated application
-~~~
+```
 
 Saving only after the switch would be too late if the extension host stopped
 before reaching that instruction.
@@ -533,20 +634,20 @@ Sources: [src/profiles.ts](../src/profiles.ts) and
 The rules use a human-readable profile name. VS Code's per-profile command
 uses an internal ID. The adapter translates between them.
 
-~~~text
+```text
 Rule profile name:  "Work Git"
          ↓ local profile catalog
 Profile ID:         "example-profile-id"
          ↓ fixed command prefix
 Command:            workbench.profiles.actions.profileEntry.example-profile-id
-~~~
+```
 
-| Function | Role |
-| --- | --- |
-| `profileCatalogPath(extensionStoragePath)` | Locate the common profile catalog starting from the storage URI supplied by VS Code |
-| `profileIds(value)` | Validate catalog data and build a name-to-ID map |
-| `ProfileSwitcher.constructor(globalStorageUri)` | Retain the editor-supplied storage location |
-| `ProfileSwitcher.switchTo(name)` | Resolve a configured profile, verify command availability, invoke it, and request a workspace-window reload |
+| Function                                        | Role                                                                                                        |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `profileCatalogPath(extensionStoragePath)`      | Locate the common profile catalog starting from the storage URI supplied by VS Code                         |
+| `profileIds(value)`                             | Validate catalog data and build a name-to-ID map                                                            |
+| `ProfileSwitcher.constructor(globalStorageUri)` | Retain the editor-supplied storage location                                                                 |
+| `ProfileSwitcher.switchTo(name)`                | Resolve a configured profile, verify command availability, invoke it, and request a workspace-window reload |
 
 The catalog resolver handles both default-profile storage and storage beneath
 a named profile. It derives the path from VS Code's supplied URI rather than
@@ -576,15 +677,15 @@ associations through its commands; the extension never edits the catalog file.
 
 ## 10. Where information is kept
 
-| Information | Location / handling |
-| --- | --- |
-| Host, folder, and profile rules | VS Code user settings; no private mapping is built into the source |
-| Enabled flag and selected remote names | Application-scoped user settings |
-| Workspace pause flag | VS Code's workspace state |
-| Last handled decision | A hash in workspace state |
-| Existing profile names and IDs | Read from VS Code's local profile catalog |
-| Decision explanations | The local Git Host Profiles output channel and status tooltip |
-| Integration-test projects and settings | Newly created temporary directories |
+| Information                            | Location / handling                                                |
+| -------------------------------------- | ------------------------------------------------------------------ |
+| Host, folder, and profile rules        | VS Code user settings; no private mapping is built into the source |
+| Enabled flag and selected remote names | Application-scoped user settings                                   |
+| Workspace pause flag                   | VS Code's workspace state                                          |
+| Last handled decision                  | A hash in workspace state                                          |
+| Existing profile names and IDs         | Read from VS Code's local profile catalog                          |
+| Decision explanations                  | The local Git Host Profiles output channel and status tooltip      |
+| Integration-test projects and settings | Newly created temporary directories                                |
 
 The configuration entries use `scope: "application"`, so repository settings
 cannot supply them and the rules apply across profiles. `ignoreSync: true`
@@ -604,18 +705,23 @@ excluded from the installed package.
 
 ### Contract tests
 
-| File | Tests | Behavior covered |
-| --- | ---: | --- |
-| [test/matching.test.ts](../test/matching.test.ts) | 12 | Remote formats, domain boundaries, mixed destinations, folder globs, literal regex characters, priority, required files, target agreement, suffix rules, validation, ownership, IPv6 |
-| [test/coordinator.test.ts](../test/coordinator.test.ts) | 4 | Persistence before switching, restart suppression, queued duplicates, force, failure recovery, returning from an unmatched context |
-| [test/profile-catalog.test.ts](../test/profile-catalog.test.ts) | 2 | Catalog locations and valid/unambiguous name-to-ID mapping |
+| File                                                            | Tests | Behavior covered                                                                                                                                                                     |
+| --------------------------------------------------------------- | ----: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [test/matching.test.ts](../test/matching.test.ts)               |    12 | Remote formats, domain boundaries, mixed destinations, folder globs, literal regex characters, priority, required files, target agreement, suffix rules, validation, ownership, IPv6 |
+| [test/coordinator.test.ts](../test/coordinator.test.ts)         |     4 | Persistence before switching, restart suppression, queued duplicates, force, failure recovery, returning from an unmatched context                                                   |
+| [test/profile-catalog.test.ts](../test/profile-catalog.test.ts) |     2 | Catalog locations and valid/unambiguous name-to-ID mapping                                                                                                                           |
+| [test/repositories.test.ts](../test/repositories.test.ts) | 5 | Outermost repository selection, discovery order, sibling boundaries, explicit submodule roots, folder fallback, and URI identity |
 
 The matching tests build representative `Target` and `Snapshot` values.
+The repository-selection tests pass representative paths to the discovery
+policy independently of the live Git API.
 The coordinator tests use a fake state store and switch callback to check
 observable ordering and behavior without starting the editor.
 
 The `state()` helper in coordinator tests creates the in-memory store.
 The `target()` and `snapshot()` helpers in matching tests keep fixtures concise.
+The `location()` and `repository()` helpers build path fixtures for the
+repository-selection tests.
 
 ### Actual VS Code integration
 
@@ -624,7 +730,7 @@ Sources: [scripts/integration.cjs](../scripts/integration.cjs) and
 
 The outer Node.js runner prepares a separate environment:
 
-~~~mermaid
+```mermaid
 flowchart TD
     Runner["scripts/integration.cjs: main"] --> Fixture["Temporary project, Git remotes, settings and profiles"]
     Fixture --> Install["Copy compiled runtime and test probe into isolated extensions directory"]
@@ -637,7 +743,7 @@ flowchart TD
     Folder --> Mixed["Verify mixed remote destinations and unmatched rules"]
     Mixed --> Result["Write result JSON and close the test window"]
     Result --> Check["Runner checks the result and process exit"]
-~~~
+```
 
 The runner's `main()` creates the fixtures, locates or downloads VS Code, starts
 it, enforces a timeout, and checks the result. Its nested `write()` helper writes
@@ -654,6 +760,11 @@ The test probe is a separate temporary extension:
 The phases are `host` and `folder`. The phase file is outside the extension host
 so restarting the host does not erase test progress.
 
+The fixture also contains a real Git submodule created from a local repository,
+with a different fictional remote host from its parent. The probe explicitly
+opens it through the Git API and verifies that it is discovered without
+changing the parent's profile selection. No remote clone or fetch is needed.
+
 The named fixture profiles use distinct tab sizes. Observing the corresponding
 tab size after a change checks that the profile took effect, rather than merely
 checking which name our own matching engine selected.
@@ -661,11 +772,14 @@ checking which name our own matching engine selected.
 The fixtures also contain a conflicting workspace-level rule, verifying that
 it cannot override the application-scoped user rule.
 
-At implementation handoff, contract tests passed, the single-workspace
-integration passed on Windows with VS Code 1.100.0 and 1.145.3, and the saved
-two-folder workspace/mixed-destination scenario passed with 1.145.3.
+The current 23 contract tests passed. The saved two-folder workspace scenario,
+including a real submodule on a conflicting host, passed locally on Windows
+with VS Code 1.100.0 and 1.146.0. It verifies that the parent still selects its
+profile after the submodule is discovered, while conflicting destinations on
+the parent itself continue to prevent a new selection.
 CI is configured for additional operating-system and version combinations;
-that configuration is not evidence that remote CI has already passed.
+that configuration is not evidence that remote CI has passed this uncommitted
+change.
 
 The integration fixtures disable workspace trust prompts to run as trusted
 fixtures. They do not establish behavior of every trust prompt, remote setup,
@@ -674,7 +788,7 @@ unsupported in this version.
 
 ## 12. Building the extension and the VSIX
 
-~~~mermaid
+```mermaid
 flowchart LR
     Source["src/*.ts and test/*.ts"] --> Compiler["TypeScript compiler"]
     Compiler --> Runtime["dist/src/*.js"]
@@ -683,7 +797,7 @@ flowchart LR
     Runtime --> Package["vsce packages the manifest allowlist"]
     Metadata["Manifest, README, changelog and license"] --> Package
     Package --> VSIX["artifacts/*.vsix"]
-~~~
+```
 
 TypeScript is the source language. VS Code runs the generated JavaScript.
 The `@types/vscode` development package supplies compile-time API declarations;
@@ -693,15 +807,15 @@ The VSIX is the installable archive. Its allowlist includes the compiled runtime
 and package metadata/documents. Tests, developer scripts, local settings,
 dependency trees, and this walkthrough are excluded.
 
-| npm command | Purpose |
-| --- | --- |
-| `npm ci` | Install the locked development dependencies |
-| `npm run check` | Type-check without generating JavaScript |
-| `npm run compile` | Compile source and tests into `dist` |
-| `npm test` | Compile, then run the Node contract tests |
-| `npm run test:integration` | Compile, then start the isolated editor test |
-| `npm run clean` | Remove generated `dist` output |
-| `npm run package` | Create the VSIX under `artifacts` |
+| npm command                 | Purpose                                                                 |
+| --------------------------- | ----------------------------------------------------------------------- |
+| `npm ci`                    | Install the locked development dependencies                             |
+| `npm run check`             | Type-check without generating JavaScript                                |
+| `npm run compile`           | Compile source and tests into `dist`                                    |
+| `npm test`                  | Compile, then run the Node contract tests                               |
+| `npm run test:integration`  | Compile, then start the isolated editor test                            |
+| `npm run clean`             | Remove generated `dist` output                                          |
+| `npm run package`           | Create the VSIX under `artifacts`                                       |
 | `npm run vscode:prepublish` | Clean and compile; the packaging tool invokes this before packaging too |
 
 The name `vscode:prepublish` does not mean the command uploads the extension.
@@ -721,23 +835,23 @@ development-only is not the only packaging control.
 
 ## 13. The remaining project files
 
-| File | Role |
-| --- | --- |
-| [package.json](../package.json) | Extension identity, entry point, minimum VS Code version, startup activation, commands, configuration schema, capabilities, developer tools, scripts, package allowlist |
-| [package-lock.json](../package-lock.json) | Exact resolved development dependency tree and package integrity values |
-| [tsconfig.json](../tsconfig.json) | Strict TypeScript checks, JavaScript target, source inclusion, and generated output location |
-| [.npmrc](../.npmrc) | Save exact dependency versions and disable dependency install scripts |
-| [.gitignore](../.gitignore) | Keep generated files, dependencies, downloaded editor builds, logs, and environment files out of Git |
-| [.gitattributes](../.gitattributes) | Consistent text line endings and binary treatment for VSIX files |
-| [.editorconfig](../.editorconfig) | UTF-8, indentation, trailing whitespace, and final-newline conventions |
-| [.vscode/launch.json](../.vscode/launch.json) | F5 extension development launch configuration |
-| [.vscode/tasks.json](../.vscode/tasks.json) | Compilation task and compiler-error integration |
-| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Contract/package jobs on Linux, Windows and macOS; isolated editor tests on Ubuntu for minimum/stable versions and one/two-root workspaces |
-| [README.md](../README.md) | Installation, local configuration examples, matching behavior, supported environments, update considerations, inspiration |
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | Development commands, test setup, packaging and publication checklist |
-| [CHANGELOG.md](../CHANGELOG.md) | User-facing release changes |
-| [LICENSE](../LICENSE) | The repository's existing GPLv3 license, preserved |
-| [This guide](ARCHITECTURE.md) | Explanation of how the implementation fits together |
+| File                                                    | Role                                                                                                                                                                    |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [package.json](../package.json)                         | Extension identity, entry point, minimum VS Code version, startup activation, commands, configuration schema, capabilities, developer tools, scripts, package allowlist |
+| [package-lock.json](../package-lock.json)               | Exact resolved development dependency tree and package integrity values                                                                                                 |
+| [tsconfig.json](../tsconfig.json)                       | Strict TypeScript checks, JavaScript target, source inclusion, and generated output location                                                                            |
+| [.npmrc](../.npmrc)                                     | Save exact dependency versions and disable dependency install scripts                                                                                                   |
+| [.gitignore](../.gitignore)                             | Keep generated files, dependencies, downloaded editor builds, logs, and environment files out of Git                                                                    |
+| [.gitattributes](../.gitattributes)                     | Consistent text line endings and binary treatment for VSIX files                                                                                                        |
+| [.editorconfig](../.editorconfig)                       | UTF-8, indentation, trailing whitespace, and final-newline conventions                                                                                                  |
+| [.vscode/launch.json](../.vscode/launch.json)           | F5 extension development launch configuration                                                                                                                           |
+| [.vscode/tasks.json](../.vscode/tasks.json)             | Compilation task and compiler-error integration                                                                                                                         |
+| [.github/workflows/ci.yml](../.github/workflows/ci.yml) | Contract/package jobs on Linux, Windows and macOS; isolated editor tests on Ubuntu for minimum/stable versions and one/two-root workspaces                              |
+| [README.md](../README.md)                               | Installation, local configuration examples, matching behavior, supported environments, update considerations, inspiration                                               |
+| [CONTRIBUTING.md](../CONTRIBUTING.md)                   | Development commands, test setup, packaging and publication checklist                                                                                                   |
+| [CHANGELOG.md](../CHANGELOG.md)                         | User-facing release changes                                                                                                                                             |
+| [LICENSE](../LICENSE)                                   | The repository's existing GPLv3 license, preserved                                                                                                                      |
+| [This guide](ARCHITECTURE.md)                           | Explanation of how the implementation fits together                                                                                                                     |
 
 The manifest contains a placeholder publisher ID for local packaging.
 Publishing requires replacing it with a publisher you control.
@@ -752,58 +866,61 @@ The implementation was written independently.
 
 Generated directories have different purposes:
 
-| Directory | Contents |
-| --- | --- |
-| `node_modules/` | Installed development tools |
-| `dist/` | Compiled JavaScript |
-| `artifacts/` | Generated VSIX archive |
+| Directory       | Contents                             |
+| --------------- | ------------------------------------ |
+| `node_modules/` | Installed development tools          |
+| `dist/`         | Compiled JavaScript                  |
+| `artifacts/`    | Generated VSIX archive               |
 | `.vscode-test/` | Downloaded editor builds when needed |
 
 ## 14. TypeScript constructs used in the code
 
 These comparisons may help if you are more familiar with Python:
 
-| Construct | Meaning in this code |
-| --- | --- |
-| `interface` | A compile-time description of an object's fields and methods |
-| `readonly` | A compile-time restriction on mutation; it does not freeze data |
-| `unknown` | A value that must be checked before its fields can be used |
-| `undefined` | An absent optional value, such as no selected profile |
-| `Set` / `Map` | Similar purposes to Python's `set` / `dict` |
-| `array.some(predicate)` | Like `any(...)` |
-| `array.every(predicate)` | Like `all(...)` |
-| `array.findIndex(predicate)` | Index of the first matching element, or -1 |
-| `value?.field` | Read a field only if the value is present |
-| `value ?? fallback` | Use the fallback for `null` or `undefined` |
-| `...object` or `...array` | Copy/spread fields or elements into a new container |
-| `value!` | Tell the compiler the value is present; this adds no runtime check |
-| `Promise` and `async/await` | Represent asynchronous work without blocking while waiting |
-| `Disposable` | An object with cleanup behavior, such as removing an event listener |
-| `CancellationToken` | A way to ask an asynchronous operation to stop |
-| `Uri` | An address containing a scheme, authority, and path; not always a local filename |
+| Construct                    | Meaning in this code                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| `interface`                  | A compile-time description of an object's fields and methods                     |
+| `readonly`                   | A compile-time restriction on mutation; it does not freeze data                  |
+| `unknown`                    | A value that must be checked before its fields can be used                       |
+| `undefined`                  | An absent optional value, such as no selected profile                            |
+| `Set` / `Map`                | Similar purposes to Python's `set` / `dict`                                      |
+| `array.some(predicate)`      | Like `any(...)`                                                                  |
+| `array.every(predicate)`     | Like `all(...)`                                                                  |
+| `array.findIndex(predicate)` | Index of the first matching element, or -1                                       |
+| `value?.field`               | Read a field only if the value is present                                        |
+| `value ?? fallback`          | Use the fallback for `null` or `undefined`                                       |
+| `...object` or `...array`    | Copy/spread fields or elements into a new container                              |
+| `value!`                     | Tell the compiler the value is present; this adds no runtime check               |
+| `Promise` and `async/await`  | Represent asynchronous work without blocking while waiting                       |
+| `Disposable`                 | An object with cleanup behavior, such as removing an event listener              |
+| `CancellationToken`          | A way to ask an asynchronous operation to stop                                   |
+| `Uri`                        | An address containing a scheme, authority, and path; not always a local filename |
 
 In particular, a TypeScript assertion is not input validation. The actual
 validation in `parseRules()` and `profileIds()` is what checks external data.
 
 ## 15. Where to make future changes
 
-| Desired change | Main places to examine |
-| --- | --- |
-| Change rule priority or agreement behavior | `matching.ts` and contract tests; then update the documented contract |
-| Add a matcher | `model.ts`, manifest schema, `matching.ts`, and possibly `Controller.snapshot()` |
-| React to another editor event | Controller subscriptions and scheduling |
-| Change explanations or status display | `describe()`, `inspect()` and UI callbacks |
-| Handle a new VS Code profile layout or command | `profile-catalog.ts` and `profiles.ts` |
-| Support remote workspaces | Extension placement, Git API availability, storage location and compatibility checks; removing the guard alone is insufficient |
-| Change delivered files | Manifest `files` allowlist and packaging inspection |
-| Publish to the Marketplace | Publisher ownership, manifest metadata, release review and CONTRIBUTING checklist |
+| Desired change                                 | Main places to examine                                                                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Change rule priority or agreement behavior     | `matching.ts` and contract tests; then update the documented contract                                                          |
+| Add a matcher                                  | `model.ts`, manifest schema, `matching.ts`, and possibly `Controller.snapshot()`                                               |
+| Change which repositories influence selection | `repositories.ts` and its tests; then update the documented target policy |
+| React to another editor event                  | Controller subscriptions and scheduling                                                                                        |
+| Change explanations or status display          | `describe()`, `inspect()` and UI callbacks                                                                                     |
+| Handle a new VS Code profile layout or command | `profile-catalog.ts` and `profiles.ts`                                                                                         |
+| Support remote workspaces                      | Extension placement, Git API availability, storage location and compatibility checks; removing the guard alone is insufficient |
+| Change delivered files                         | Manifest `files` allowlist and packaging inspection                                                                            |
+| Publish to the Marketplace                     | Publisher ownership, manifest metadata, release review and CONTRIBUTING checklist                                              |
 
 For a manual code review, a useful reading order is:
 
 1. [model.ts](../src/model.ts): learn the data contracts and validation.
 2. [matching.ts](../src/matching.ts): follow the decision without editor details.
 3. [matching tests](../test/matching.test.ts): compare the contract with examples.
-4. [extension.ts](../src/extension.ts): follow how real facts reach the engine.
+4. [repositories.ts](../src/repositories.ts) and
+   [extension.ts](../src/extension.ts): follow how top-level locations are selected
+   and their facts reach the engine.
 5. [coordinator.ts](../src/coordinator.ts): inspect state and restart handling.
 6. [profile-catalog.ts](../src/profile-catalog.ts) and
    [profiles.ts](../src/profiles.ts): examine the compatibility boundary.

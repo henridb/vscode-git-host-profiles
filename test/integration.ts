@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
-import { appendFile, readFile, writeFile } from 'node:fs/promises';
-import * as path from 'node:path';
+import { readFile, writeFile } from 'node:fs/promises';
 import * as vscode from 'vscode';
 import type { GitExtension } from '../src/git';
 import type { ExtensionApi } from '../src/extension';
@@ -42,9 +41,17 @@ async function run(): Promise<void> {
   const api = await extension.activate();
   await until(async () => (await api.inspect()).ready, 'Git discovery did not finish');
   const configuration = vscode.workspace.getConfiguration('gitHostProfiles');
+  const git = vscode.extensions.getExtension<GitExtension>('vscode.git')!.exports.getAPI(1);
+  const submodule = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0]!.uri, 'vendor/library');
+  await git.openRepository(submodule);
+  await until(async () => git.repositories.some(repository =>
+    repository.rootUri.path.endsWith('/vendor/library') &&
+    repository.state.remotes.some(remote => remote.fetchUrl === 'https://other.example.org/team/library.git')),
+  'Git did not discover the conflicting submodule');
 
   if (phase === 'host') {
-    assert.equal((await api.inspect()).decision.profile, 'Example Forge', 'Workspace settings cannot override user rules');
+    assert.equal((await api.inspect()).decision.profile, 'Example Forge',
+      'The top-level repository selects the profile despite a conflicting submodule and workspace rule');
     await until(async () => vscode.workspace.getConfiguration('editor').get('tabSize') === 7,
       'Automatic remote-host selection did not switch to the named profile: ' +
       JSON.stringify(vscode.workspace.getConfiguration('editor').inspect('tabSize')));
@@ -68,11 +75,11 @@ async function run(): Promise<void> {
   assert.equal((await api.inspect()).decision.profile, 'Example Folder');
   // A mixed-host repository must not choose the first matching host.
   await vscode.commands.executeCommand('gitHostProfiles.togglePause');
-  const git = vscode.extensions.getExtension<GitExtension>('vscode.git')!.exports.getAPI(1);
-  const root = vscode.workspace.workspaceFolders![0]!.uri.fsPath;
-  await appendFile(path.join(root, '.git', 'config'),
-    '\n[remote "secondary"]\n\turl = https://other.example.org/team/repository.git\n');
-  await until(async () => git.repositories.some(repository => repository.state.remotes.length === 2),
+  const main = git.repositories.find(repository => repository.state.remotes.some(remote =>
+    remote.fetchUrl === 'https://forge.example.org/team/repository.git'));
+  assert.ok(main, 'Main repository is available');
+  await main.addRemote('secondary', 'https://other.example.org/team/repository.git');
+  await until(async () => main.state.remotes.some(remote => remote.name === 'secondary'),
     'Git did not discover the second remote destination');
   await configuration.update('rules', [
     { profile: 'Example Forge', remoteHosts: ['forge.example.org'] },
@@ -97,7 +104,7 @@ async function run(): Promise<void> {
     result: 'passed',
     vscode: vscode.version,
     workspaceFolders: vscode.workspace.workspaceFolders?.length,
-    checks: ['Git API discovery', 'user-only rules', 'automatic profile switch in a new repository',
+    checks: ['Git API discovery', 'conflicting submodule excluded', 'user-only rules', 'automatic profile switch in a new repository',
       'profile reload persistence', 'rules shared across profiles', 'pause/resume',
       'folder glob', 'project files', 'mixed remote destinations', 'unmatched profile retained', 'disable'],
   }, null, 2));

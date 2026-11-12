@@ -21,10 +21,12 @@ release addressing GHSA-g3hv-75wg-m249. It is development-only. Recheck the
 override when updating @vscode/vsce, including package contents and npm audit.
 
 The contract tests cover rule validation, remote parsing, glob boundaries,
-multi-target agreement, caller ownership, profile catalog layouts, and restart
-suppression. The integration test creates a temporary Git repository, profiles,
-and user-data directory, then verifies actual native profile changes across
-extension-host restarts. It does not use your normal VS Code configuration.
+multi-target agreement, caller ownership, profile catalog layouts, restart
+suppression, and top-level repository selection. The integration test creates
+a temporary Git repository with a real submodule, profiles, and a user-data
+directory, then verifies native profile changes across extension-host restarts
+and that a dependency's conflicting host does not affect its parent.
+It does not use your normal VS Code configuration.
 
 The integration runner downloads stable VS Code by default. Set
 VSCODE_EXECUTABLE_PATH to use an existing installation, or VSCODE_VERSION to
@@ -42,6 +44,7 @@ test profiles rather than personal workspaces when testing profile changes.
 - src/model.ts validates the user configuration and defines the matching inputs.
 - src/matching.ts makes profile decisions without accessing VS Code.
 - src/coordinator.ts prevents repeated switches across reloads.
+- src/repositories.ts selects top-level repositories within each workspace root.
 - src/extension.ts collects workspace information and manages commands/events.
 - src/profiles.ts and src/profile-catalog.ts isolate profile compatibility.
 

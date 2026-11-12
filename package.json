@@ -94,7 +94,7 @@
           "type": "array",
           "default": [],
           "scope": "application",
-          "description": "Rules in priority order. The first matching rule wins for each repository or folder. Every target must select the same profile.",
+          "description": "Rules in priority order. The first matching rule wins for each top-level repository or fallback folder. Nested dependencies are ignored. Every target must select the same profile.",
           "items": {
             "type": "object",
             "additionalProperties": false,

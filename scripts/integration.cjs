@@ -13,12 +13,16 @@ async function main() {
   const userData = path.join(fixture, 'user-data');
   const project = path.join(fixture, 'gits', 'gh-example', 'new-repository');
   const user = path.join(userData, 'User');
+  const hooks = path.join(fixture, 'empty-hooks');
+  fs.mkdirSync(hooks);
   const write = (name, data) => {
     fs.mkdirSync(path.dirname(name), { recursive: true });
     fs.writeFileSync(name, typeof data === 'string' ? data : JSON.stringify(data, null, 2));
   };
   const git = (directory, ...args) => {
-    const result = spawnSync('git', ['-C', directory, ...args], { encoding: 'utf8', windowsHide: true });
+    const result = spawnSync('git', ['-c', 'core.hooksPath=' + hooks,
+      '-c', 'commit.gpgsign=false', '-c', 'init.templateDir=' + hooks,
+      '-C', directory, ...args], { encoding: 'utf8', windowsHide: true });
     if (result.status !== 0) {
       throw new Error('Fixture git command failed: ' + result.stderr);
     }
@@ -28,6 +32,19 @@ async function main() {
   git(project, 'remote', 'add', 'origin', 'https://forge.example.org/team/repository.git');
   write(path.join(project, 'package.json'), { private: true });
   write(path.join(project, 'src', 'example.ts'), 'export const example = true;\n');
+  // Create a real submodule entirely from local fixture data, then give it a
+  // conflicting host. The test never clones from or contacts that host.
+  const upstream = path.join(fixture, 'dependency-upstream');
+  fs.mkdirSync(upstream);
+  git(upstream, 'init', '--quiet');
+  write(path.join(upstream, 'README.md'), '# Dependency fixture\n');
+  git(upstream, 'add', 'README.md');
+  git(upstream, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.org',
+    'commit', '--quiet', '-m', 'Create dependency fixture');
+  git(project, '-c', 'protocol.file.allow=always', 'submodule', 'add', '--quiet',
+    upstream, 'vendor/library');
+  git(path.join(project, 'vendor', 'library'), 'remote', 'set-url', 'origin',
+    'https://other.example.org/team/library.git');
   // Workspace settings must never be allowed to choose a profile.
   write(path.join(project, '.vscode', 'settings.json'), {
     'gitHostProfiles.rules': [{ profile: 'Unwanted', folders: ['**'] }],
@@ -41,7 +58,11 @@ async function main() {
     'chat.disableAIFeatures': true,
     'security.workspace.trust.enabled': false,
     'git.openRepositoryInParentFolders': 'always',
-    'gitHostProfiles.rules': [{ profile: 'Example Forge', remoteHosts: ['forge.example.org'] }],
+    'git.detectSubmodules': true,
+    'gitHostProfiles.rules': [
+      { profile: 'Example Forge', remoteHosts: ['forge.example.org'] },
+      { profile: 'Example Folder', remoteHosts: ['other.example.org'] },
+    ],
   });
   write(path.join(user, 'globalStorage', 'storage.json'), {
     userDataProfiles: [

@@ -19,7 +19,7 @@ individual setup.
 There are no built-in host mappings or profile names. This example uses a public
 host and a fictional self-hosted instance; replace the names with your own:
 
-~~~json
+```json
 {
   "gitHostProfiles.rules": [
     {
@@ -32,7 +32,7 @@ host and a fictional self-hosted instance; replace the names with your own:
     }
   ]
 }
-~~~
+```
 
 The profile names must exactly match existing profiles. The extension does not
 create profiles, install other extensions, or authenticate with your Git host.
@@ -42,7 +42,7 @@ Profile switching can restart extensions or reopen the current workspace.
 
 Folder rules can cover whole groups of current and future repositories:
 
-~~~json
+```json
 {
   "gitHostProfiles.rules": [
     {
@@ -55,17 +55,17 @@ Folder rules can cover whole groups of current and future repositories:
     }
   ]
 }
-~~~
+```
 
 Folders are matched against their absolute paths. Use forward slashes even on
 Windows. A leading ~ expands to your home directory.
 
-| Pattern | Meaning |
-| --- | --- |
-| * | Zero or more characters within one path segment |
-| ? | One character within one path segment |
-| ** | Any number of characters, including directory separators |
-| **/ | Zero or more directory levels |
+| Pattern | Meaning                                                  |
+| ------- | -------------------------------------------------------- |
+| \*      | Zero or more characters within one path segment          |
+| ?       | One character within one path segment                    |
+| \*\*    | Any number of characters, including directory separators |
+| \*\*/   | Zero or more directory levels                            |
 
 Matching is case-insensitive on Windows and macOS, and case-sensitive on Linux.
 Braces, brackets, and other regex syntax are literal characters in folder and
@@ -79,7 +79,7 @@ These use [VS Code file glob syntax](https://code.visualstudio.com/docs/editor/g
 The extension searches filenames without reading their contents and excludes
 .git and node_modules directories.
 
-~~~json
+```json
 {
   "gitHostProfiles.rules": [
     {
@@ -92,7 +92,7 @@ The extension searches filenames without reading their contents and excludes
     }
   ]
 }
-~~~
+```
 
 Standalone file rules apply only when no workspace folder is open and a saved
 local file is active. Suffixes are case-insensitive; .d.ts is supported.
@@ -107,10 +107,13 @@ Keep standalone file rules separate from folder, host, and project-file rules.
 - Every selected fetch and push destination must match a host rule. A repository
   with conflicting or unknown destinations stays unchanged unless another rule,
   such as an explicit folder rule, matches it.
-- In a workspace containing multiple repositories discovered by VS Code's Git
-  integration, or multiple workspace folders, all must select
-  the same profile. A disagreement or an unmatched target keeps the current
-  profile. This also applies to saved multi-root workspaces.
+- Within each workspace root folder, only the outermost discovered repositories
+  influence selection. Nested repositories and submodules are ignored unless
+  opened as their own workspace root folder. A dependency's hosting location
+  therefore does not affect its parent project's profile.
+- Independent top-level repositories and workspace folders must all select the
+  same profile. A disagreement or an unmatched target keeps the current profile.
+  This also applies to saved multi-root workspaces.
 - With no match, the current profile stays selected.
 - Rules are reevaluated after repository, remote, workspace, rule, or relevant
   filename changes. Standalone files are checked when the active editor changes.
@@ -124,11 +127,11 @@ Local filesystem remotes and unrecognized transports have no known host.
 
 Use gitHostProfiles.remoteNames to restrict which remotes count:
 
-~~~json
+```json
 {
   "gitHostProfiles.remoteNames": ["origin"]
 }
-~~~
+```
 
 An empty list, the default, considers every remote. Restricting the list
 deliberately ignores other destinations.
@@ -137,20 +140,20 @@ deliberately ignores other destinations.
 
 Commands are available through the Command Palette under **Git Host Profiles**:
 
-| Command | Effect |
-| --- | --- |
-| Explain Profile Selection | Show the selected profile, matching rule numbers, or why no switch applies |
-| Apply Profile Rules Now | Reapply the current rules, including after a manual profile choice |
-| Pause or Resume Automatic Switching | Remember a pause for the current workspace |
+| Command                             | Effect                                                                     |
+| ----------------------------------- | -------------------------------------------------------------------------- |
+| Explain Profile Selection           | Show the selected profile, matching rule numbers, or why no switch applies |
+| Apply Profile Rules Now             | Reapply the current rules, including after a manual profile choice         |
+| Pause or Resume Automatic Switching | Remember a pause for the current workspace                                 |
 
 The status bar item opens the explanation. Pause takes precedence over the
 Apply command; resume switching first.
 
-| User setting | Default | Effect |
-| --- | --- | --- |
-| gitHostProfiles.enabled | true | Enable automatic selection |
-| gitHostProfiles.rules | [] | Ordered profile selection rules |
-| gitHostProfiles.remoteNames | [] | Remote names to consider; empty means all |
+| User setting                | Default | Effect                                    |
+| --------------------------- | ------- | ----------------------------------------- |
+| gitHostProfiles.enabled     | true    | Enable automatic selection                |
+| gitHostProfiles.rules       | []      | Ordered profile selection rules           |
+| gitHostProfiles.remoteNames | []      | Remote names to consider; empty means all |
 
 These settings apply across profiles and cannot be supplied by workspace or
 repository settings. They are excluded from Settings Sync by default. Keep your
@@ -164,11 +167,11 @@ after correcting them.
 
 Build the reviewed source with Node.js 24 or newer:
 
-~~~sh
+```sh
 npm ci
 npm test
 npm run package
-~~~
+```
 
 Choose **Extensions: Install from VSIX...** and select the file under artifacts/.
 

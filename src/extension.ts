@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
-import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { SwitchCoordinator } from './coordinator';
 import type { GitApi, GitExtension, Repository } from './git';
 import { decide, remoteHost } from './matching';
 import { parseRules, type Decision, type Rule, type Snapshot, type Target } from './model';
 import { ProfileSwitcher } from './profiles';
+import { belongsTo, topLevelRepositories } from './repositories';
 
 const SECTION = 'gitHostProfiles';
 const FILE_EXCLUDES = '**/{.git,node_modules}/**';
@@ -20,14 +20,6 @@ export interface Inspection {
 
 export interface ExtensionApi {
   inspect(): Promise<Inspection>;
-}
-
-function belongsTo(parent: vscode.Uri, child: vscode.Uri): boolean {
-  if (parent.scheme !== child.scheme || parent.authority !== child.authority) {
-    return false;
-  }
-  const relative = path.relative(parent.fsPath, child.fsPath);
-  return relative === '' || (relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative));
 }
 
 class Controller implements vscode.Disposable {
@@ -167,7 +159,7 @@ class Controller implements vscode.Disposable {
     const workspaceFolders = vscode.workspace.workspaceFolders ?? [];
     const candidates = new Map<string, { uri: vscode.Uri; repository?: Repository }>();
     for (const folder of workspaceFolders) {
-      const repositories = this.git?.repositories.filter(repository => belongsTo(folder.uri, repository.rootUri)) ?? [];
+      const repositories = topLevelRepositories(folder.uri, this.git?.repositories ?? []);
       if (repositories.length) {
         for (const repository of repositories) {
           candidates.set(repository.rootUri.toString(), { uri: repository.rootUri, repository });
