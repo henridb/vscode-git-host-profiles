@@ -206,6 +206,9 @@ instead of creating profiles or invoking an external program.
 
 ## Development
 
+Read the [implementation walkthrough](docs/ARCHITECTURE.md) for architecture
+diagrams, a worked example, and a file-by-file and function-by-function tour.
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for tests, packaging, and the publication
 checklist.
 

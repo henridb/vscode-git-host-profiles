@@ -41,6 +41,9 @@ test profiles rather than personal workspaces when testing profile changes.
 
 ## Code layout
 
+Start with the [implementation walkthrough](docs/ARCHITECTURE.md) to understand
+the architecture, matching contract, and how the runtime functions fit together.
+
 - src/model.ts validates the user configuration and defines the matching inputs.
 - src/matching.ts makes profile decisions without accessing VS Code.
 - src/coordinator.ts prevents repeated switches across reloads.
