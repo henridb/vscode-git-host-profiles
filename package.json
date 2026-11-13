@@ -2,7 +2,7 @@
   "name": "vscode-git-host-profiles",
   "displayName": "Smart Profiles",
   "description": "Automatically select VS Code profiles using Git remote hosts, folder globs, project files, or file extensions.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "HenrideBoutray",
   "icon": "media/icon.png",
   "galleryBanner": {
