@@ -117,7 +117,8 @@ async function main() {
   }
   console.log('Isolated VS Code fixture: ' + fixture);
   await new Promise((resolve, reject) => {
-    const log = fs.createWriteStream(path.join(fixture, 'vscode.log'));
+    const logPath = path.join(fixture, 'vscode.log');
+    const log = fs.createWriteStream(logPath);
     const child = spawn(executable, args, { env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     child.stdout.pipe(log, { end: false });
     child.stderr.pipe(log, { end: false });
@@ -126,10 +127,19 @@ async function main() {
       reject(new Error('VS Code integration tests timed out after 90 seconds. Fixture retained: ' + fixture));
     }, 90_000);
     child.on('error', error => { clearTimeout(timeout); reject(error); });
-    child.on('exit', code => {
+    // Wait for stdout/stderr to drain before reading the captured launch output.
+    child.on('close', (code, signal) => {
       clearTimeout(timeout);
-      log.end();
-      code === 0 ? resolve() : reject(new Error('VS Code integration tests exited with ' + code));
+      log.end(() => {
+        if (code === 0) {
+          resolve();
+          return;
+        }
+        const reason = signal ? 'signal ' + signal : 'exit code ' + code;
+        const output = fs.readFileSync(logPath, 'utf8').trim().slice(-8000);
+        reject(new Error('VS Code integration tests terminated with ' + reason +
+          '. Fixture retained: ' + fixture + (output ? '\nVS Code output:\n' + output : '')));
+      });
     });
   });
   if (!fs.existsSync(resultPath)) {

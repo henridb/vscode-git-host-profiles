@@ -41,4 +41,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Allow Chromium to use its namespace sandbox
+        # Ubuntu 24.04 restricts unprivileged user namespaces via AppArmor.
+        # This changes only the disposable integration-test runner.
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: xvfb-run -a npm run test:integration
