@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256"
+     role="img" aria-labelledby="title description">
+  <title id="title">Smart Profiles</title>
+  <desc id="description">A Git branch routes to cyan and amber profile settings cards.</desc>
+
+  <!-- Keep the complete tile opaque; only its outer rounded corners are transparent. -->
+  <rect id="background" width="256" height="256" rx="52" fill="#0b0d22"/>
+
+  <!-- Repository-to-profile connectors. -->
+  <g fill="none" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 69 125 C 97 125 95 101 126 101" stroke="#00d7e8"/>
+    <path d="M 69 133 C 96 133 93 160 113 160" stroke="#ffb923"/>
+  </g>
+  <path d="M 125 89 L 138 101 L 125 113 Z" fill="#00d7e8"/>
+  <path d="M 112 148 L 125 160 L 112 172 Z" fill="#ffb923"/>
+
+  <!-- Back profile card. Solid fill prevents transparency inside the outline. -->
+  <g stroke="#00d7e8" stroke-linecap="round">
+    <rect x="138" y="66" width="80" height="70" rx="10" fill="#0b0d22" stroke-width="7"/>
+    <path d="M 154 89 H 201 M 154 111 H 201" fill="none" stroke-width="6"/>
+    <g fill="#00d7e8" stroke="none">
+      <circle cx="190" cy="89" r="7"/>
+      <circle cx="169" cy="111" r="7"/>
+    </g>
+  </g>
+
+  <!-- Front profile card. -->
+  <g stroke="#ffb923" stroke-linecap="round">
+    <rect x="124" y="126" width="84" height="66" rx="10" fill="#0b0d22" stroke-width="7"/>
+    <path d="M 140 148 H 192 M 140 169 H 192" fill="none" stroke-width="6"/>
+    <g fill="#ffb923" stroke="none">
+      <circle cx="180" cy="148" r="7"/>
+      <circle cx="155" cy="169" r="7"/>
+    </g>
+  </g>
+
+  <!-- Git nodes have navy centers rather than transparent cutouts. -->
+  <g fill="#0b0d22" stroke="#f6f7ff" stroke-width="10">
+    <path d="M 54 64 V 192" fill="none"/>
+    <circle cx="54" cy="64" r="14"/>
+    <circle cx="54" cy="128" r="15"/>
+    <circle cx="54" cy="192" r="14"/>
+  </g>
+</svg>

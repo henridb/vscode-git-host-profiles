@@ -2,7 +2,7 @@
   "name": "vscode-git-host-profiles",
   "displayName": "Smart Profiles",
   "description": "Automatically select VS Code profiles using Git remote hosts, folder globs, project files, or file extensions.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "HenrideBoutray",
   "icon": "media/icon.png",
   "galleryBanner": {
@@ -45,6 +45,7 @@
     "check": "tsc -p . --noEmit",
     "test": "npm run compile && node --test dist/test/*.test.js",
     "test:integration": "npm run compile && node scripts/integration.cjs",
+    "icon:render": "node scripts/render-icon.cjs",
     "demo": "npm run compile && node scripts/demo.cjs",
     "vscode:prepublish": "npm run clean && npm run compile",
     "package": "node scripts/package.cjs"

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- Fix unintended transparency inside the extension icon.
+- Add an editable SVG source and a PNG export command for contributors.
+
 ## 0.1.1
 
 - Rename the extension and its user-facing labels to Smart Profiles.

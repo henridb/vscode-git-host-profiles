@@ -9,7 +9,7 @@ not run the capture tools.
 | File                                              | Purpose                                                 |
 | ------------------------------------------------- | ------------------------------------------------------- |
 | [media/icon.png](../media/icon.png)               | 256 × 256 PNG used by the extension manifest and README |
-| [media/icon-source.png](../media/icon-source.png) | Original generated artwork, retained for future exports |
+| [media/icon.svg](../media/icon.svg) | Editable SVG source for the icon |
 | [media/demo.gif](../media/demo.gif)               | Three-frame recording, with 4.5 seconds per state       |
 | [media/demo.png](../media/demo.png)               | Static GitHub-state preview                             |
 
@@ -81,44 +81,28 @@ Copy artifacts/demo/01-github.png to media/demo.png as the static alternative.
 Before committing a new recording, inspect every frame and confirm that the
 native profile title and depicted remote agree with the scenario.
 
-## Icon provenance
+## Icon source and export
 
-The original artwork was created with the built-in image-generation tool and
-exported to a 256 × 256 PNG using high-quality bicubic downsampling. The design
-uses an original branch-and-profile motif, without hosting-service mascots or
-logos. The source image is retained in this repository.
+[media/icon.svg](../media/icon.svg) is the editable, hand-authored icon source.
+The rounded navy tile has a solid fill, including the centers of the Git nodes
+and profile cards. Only the area outside the tile is transparent.
 
-The generation prompt was:
+[media/icon.png](../media/icon.png) is the 256 × 256 export used by the README
+and Marketplace. To regenerate it after editing the SVG, run:
 
-> Use case: logo-brand. Asset type: square Visual Studio Code Marketplace
-> extension icon for an open-source utility named Git Host Profiles. Primary
-> request: one polished, original, minimal app icon expressing Git repository
-> branches automatically selecting editor profiles. Composition: a bold central
-> branching connector with three circular Git-like nodes, transitioning into two
-> small rounded editor-profile cards, one slightly offset behind the other. Keep
-> the silhouette simple and readable at 32 pixels. Flat geometric vector-like
-> style, crisp thick strokes, restrained cyan and warm amber accents on a solid
-> deep ink/navy rounded-square tile, centered with generous safe padding. No
-> letters, words, numbers, watermark, company mascots, GitHub/GitLab/VS Code
-> trademarks, gradients, photographic effects, or mockup surroundings. Deliver
-> one icon only, straight-on, square canvas with an opaque background.
+~~~sh
+npm run icon:render
+~~~
 
-The outer white corners were subsequently removed with the built-in image editor.
-Only the area outside the navy rounded square is transparent; the navy tile and
-white branch are preserved. The edited source was exported again to 256 × 256,
-preserving its alpha channel.
+The exporter needs an installed Chrome, Chromium, or Edge browser. It detects
+common installation locations; set GHP_BROWSER_PATH to the browser executable
+if it is installed elsewhere. It uses an isolated headless browser profile,
+without additional npm dependencies or changes to personal browser settings.
 
-The edit prompt was:
+Before saving the PNG, the exporter checks every pixel inside the rounded tile
+for full opacity and every pixel outside it for transparency. A one-pixel band
+around the outline is excluded from those checks to allow smooth antialiasing.
 
-> Use case: background-extraction. Image 1 is the edit target, an existing
-> finished extension icon. Make one precise edit only: replace the WHITE OUTER
-> CANVAS/CORNERS OUTSIDE the dark navy rounded-square tile with genuine
-> transparent alpha. The entire navy rounded-square tile must remain fully
-> opaque, including the navy inside all symbol holes. Preserve the existing
-> white Git branch and its three circular nodes as opaque white. Preserve the
-> cyan and amber profile cards and connectors, all interior colors, positions,
-> shapes, lighting, and composition. Do not redesign, re-layout, recolor, add
-> text, crop, or remove the navy tile. Keep the complete square canvas and a
-> smooth antialiased rounded outer edge, with no white fringe or halo. Output an
-> RGBA PNG with transparent outer corners; no checkerboard pattern baked into
-> the pixels.
+The exported PNG is committed, so ordinary builds and CI do not need to run a
+browser. Commit SVG edits together with their regenerated PNG. Only the PNG is
+included in the VSIX; the SVG source and exporter remain development files.

@@ -805,7 +805,7 @@ the actual `vscode` API module is supplied by the editor at runtime.
 
 The VSIX is the installable archive. Its allowlist includes the compiled runtime
 and package metadata/documents, the icon, and the README demonstration assets.
-Tests, developer scripts, original icon artwork, local settings, dependency
+Tests, developer scripts, SVG icon source, local settings, dependency
 trees, and this walkthrough are excluded.
 
 | npm command                 | Purpose                                                                 |

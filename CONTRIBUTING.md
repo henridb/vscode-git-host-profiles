@@ -66,7 +66,7 @@ on Windows it also rebuilds the GIF. Inspect all frames before committing them.
 
 npm run package creates a VSIX in artifacts/. The package contains the runtime,
 README, changelog, license, manifest, and icon/demo assets. Developer tools,
-tests, fixtures, original icon artwork, local
+tests, fixtures, SVG icon source, local
 settings, and source-control files are excluded.
 
 Before publishing:
